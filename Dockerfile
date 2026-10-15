@@ -13,8 +13,8 @@ WORKDIR /app
 # Copy dependency manifests
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --omit=dev
+# Install production dependencies only (with fallback)
+RUN npm ci --omit=dev || npm install --omit=dev
 
 # Copy server entrypoint and backend server implementation
 COPY server.js ./

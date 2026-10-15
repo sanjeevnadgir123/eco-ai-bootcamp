@@ -56,7 +56,21 @@ const server = http.createServer((req, res) => {
     });
   }
 
-  // Serve static assets from dist/
+  // Handle root and health ping when running as standalone API service (e.g. on Cloud Run)
+  if (req.url === '/' || req.url === '/health') {
+    const indexPath = path.join(distDir, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({
+        status: 'online',
+        service: 'ECO AI Bootcamp Backend API',
+        healthCheck: '/api/health',
+        timestamp: new Date().toISOString()
+      }));
+    }
+  }
+
+  // Serve static assets from dist/ (if present)
   let filePath = path.join(distDir, req.url === '/' ? 'index.html' : req.url.split('?')[0]);
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     filePath = path.join(distDir, 'index.html');
@@ -68,8 +82,8 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': contentType });
     fs.createReadStream(filePath).pipe(res);
   } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Production assets not found. Please run `npm run build` first.');
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Endpoint not found' }));
   }
 });
 
