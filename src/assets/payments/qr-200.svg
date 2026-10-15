@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <defs>
+    <linearGradient id="qrGrad200" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9333ea" />
+      <stop offset="100%" stop-color="#db2777" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="300" height="300" fill="#ffffff" rx="16" />
+  
+  <!-- Outer Corner 1 -->
+  <rect x="25" y="25" width="60" height="60" rx="8" fill="none" stroke="#0f172a" stroke-width="10" />
+  <rect x="42" y="42" width="26" height="26" rx="4" fill="#0f172a" />
+  
+  <!-- Outer Corner 2 -->
+  <rect x="215" y="25" width="60" height="60" rx="8" fill="none" stroke="#0f172a" stroke-width="10" />
+  <rect x="232" y="42" width="26" height="26" rx="4" fill="#0f172a" />
+  
+  <!-- Outer Corner 3 -->
+  <rect x="25" y="215" width="60" height="60" rx="8" fill="none" stroke="#0f172a" stroke-width="10" />
+  <rect x="42" y="232" width="26" height="26" rx="4" fill="#0f172a" />
+  
+  <!-- QR Pattern Grid Blocks -->
+  <rect x="110" y="30" width="20" height="16" fill="#0f172a" rx="2" />
+  <rect x="140" y="25" width="25" height="20" fill="#0f172a" rx="2" />
+  <rect x="175" y="30" width="16" height="16" fill="#0f172a" rx="2" />
+  <rect x="105" y="60" width="16" height="25" fill="#0f172a" rx="2" />
+  <rect x="130" y="65" width="30" height="16" fill="#0f172a" rx="2" />
+  <rect x="170" y="55" width="25" height="20" fill="#0f172a" rx="2" />
+  
+  <rect x="30" y="105" width="25" height="16" fill="#0f172a" rx="2" />
+  <rect x="65" y="100" width="16" height="26" fill="#0f172a" rx="2" />
+  <rect x="100" y="105" width="16" height="16" fill="#0f172a" rx="2" />
+  <rect x="180" y="105" width="16" height="16" fill="#0f172a" rx="2" />
+  <rect x="215" y="95" width="25" height="20" fill="#0f172a" rx="2" />
+  <rect x="250" y="105" width="25" height="16" fill="#0f172a" rx="2" />
+  
+  <rect x="25" y="140" width="16" height="25" fill="#0f172a" rx="2" />
+  <rect x="55" y="145" width="30" height="16" fill="#0f172a" rx="2" />
+  <rect x="215" y="140" width="25" height="16" fill="#0f172a" rx="2" />
+  <rect x="250" y="135" width="20" height="30" fill="#0f172a" rx="2" />
+  
+  <!-- Center Badge for 200 -->
+  <rect x="110" y="115" width="80" height="70" rx="10" fill="url(#qrGrad200)" />
+  <text x="150" y="145" font-family="Arial, sans-serif" font-weight="900" font-size="20" fill="#ffffff" text-anchor="middle">₹200</text>
+  <text x="150" y="168" font-family="Arial, sans-serif" font-weight="700" font-size="10" fill="#fdf2f8" text-anchor="middle">STANDARD</text>
+  
+  <!-- Bottom QR blocks -->
+  <rect x="105" y="200" width="25" height="20" fill="#0f172a" rx="2" />
+  <rect x="145" y="205" width="20" height="16" fill="#0f172a" rx="2" />
+  <rect x="175" y="200" width="25" height="25" fill="#0f172a" rx="2" />
+  <rect x="115" y="235" width="20" height="30" fill="#0f172a" rx="2" />
+  <rect x="145" y="240" width="30" height="16" fill="#0f172a" rx="2" />
+  <rect x="185" y="235" width="16" height="25" fill="#0f172a" rx="2" />
+  <rect x="220" y="205" width="30" height="16" fill="#0f172a" rx="2" />
+  <rect x="260" y="200" width="16" height="25" fill="#0f172a" rx="2" />
+  <rect x="225" y="235" width="20" height="30" fill="#0f172a" rx="2" />
+  <rect x="255" y="245" width="20" height="16" fill="#0f172a" rx="2" />
+</svg>
