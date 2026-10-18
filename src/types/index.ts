@@ -43,6 +43,8 @@ export interface StudentRegistration {
   fullName: string;
   email: string;
   phone: string;
+  usn?: string;
+  semester?: string;
   isEligible?: boolean;
   feeAmount: number;
   utrNumber?: string;
@@ -65,4 +67,6 @@ export interface RegistrationFormData {
   fullName: string;
   email: string;
   phone: string;
+  usn: string;
+  semester: string;
 }

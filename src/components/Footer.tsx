@@ -70,7 +70,6 @@ export const Footer: React.FC<FooterProps> = () => {
               </h4>
               <ul className="text-xs text-slate-600 space-y-1">
                 <li>&bull; Geminal Studio</li>
-                <li>&bull; OSCode Tech Community — AGMRCET Chapter</li>
               </ul>
             </div>
           </div>

@@ -4,6 +4,8 @@ export function exportRegistrationsToCsv(registrations: StudentRegistration[]) {
   const headers = [
     'Registration ID',
     'Student Name',
+    'USN',
+    'Semester',
     'College Email',
     'Phone Number',
     'Fee (INR)',
@@ -18,6 +20,8 @@ export function exportRegistrationsToCsv(registrations: StudentRegistration[]) {
   const rows = registrations.map((r) => [
     `"${r.registrationId}"`,
     `"${r.fullName.replace(/"/g, '""')}"`,
+    `"${r.usn || 'N/A'}"`,
+    `"${r.semester || 'N/A'}"`,
     `"${r.email}"`,
     `"${r.phone}"`,
     `"${r.feeAmount}"`,

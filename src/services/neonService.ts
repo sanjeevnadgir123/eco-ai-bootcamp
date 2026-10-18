@@ -74,6 +74,8 @@ export const neonService = {
     fullName: string;
     email: string;
     phone: string;
+    usn?: string;
+    semester?: string;
     isEligible?: boolean;
     feeAmount?: number;
     utrNumber: string;

@@ -148,6 +148,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       r.email.toLowerCase().includes(term) ||
       r.phone.includes(term) ||
       r.registrationId.toLowerCase().includes(term) ||
+      (r.usn && r.usn.toLowerCase().includes(term)) ||
+      (r.semester && r.semester.toLowerCase().includes(term)) ||
       (r.utrNumber && r.utrNumber.toLowerCase().includes(term));
 
     const matchesStatus = filterStatus === 'ALL' || r.paymentStatus === filterStatus;
@@ -420,6 +422,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <tr>
                     <th className="px-4 py-3.5">Registration ID</th>
                     <th className="px-4 py-3.5">Student</th>
+                    <th className="px-4 py-3.5">USN & Sem</th>
                     <th className="px-4 py-3.5">Contact</th>
                     <th className="px-4 py-3.5">Submitted UTR</th>
                     <th className="px-4 py-3.5">Payment Status</th>
@@ -429,7 +432,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <tbody className="divide-y divide-slate-100">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
+                      <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
                         No registration records found matching the filter criteria.
                       </td>
                     </tr>
@@ -442,6 +445,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         <td className="px-4 py-3">
                           <span className="font-bold text-slate-900 block">{reg.fullName}</span>
                           <span className="text-[11px] text-slate-500">{reg.email}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-mono font-semibold text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-block">
+                            {reg.usn || 'N/A'}
+                          </span>
+                          <span className="text-[11px] text-slate-600 block mt-0.5">
+                            {reg.semester || 'N/A'}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-slate-700">
                           {reg.phone}
@@ -534,6 +545,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <div>
                   <span className="text-slate-500 block text-[10px]">Student Name</span>
                   <strong className="text-slate-900">{selectedReg.fullName}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">USN</span>
+                  <strong className="text-indigo-700 font-mono">{selectedReg.usn || 'N/A'}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Semester</span>
+                  <strong className="text-slate-900">{selectedReg.semester || 'N/A'}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">Email Address</span>

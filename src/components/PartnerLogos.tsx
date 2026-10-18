@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Sparkles, Code2, Globe2, Award } from 'lucide-react';
+import { Cpu, Sparkles, Globe2, Award } from 'lucide-react';
 
 export const PartnerLogos: React.FC = () => {
   const partners = [
@@ -31,13 +31,6 @@ export const PartnerLogos: React.FC = () => {
       icon: <Globe2 className="w-5 h-5 text-pink-600" />,
       accent: 'border-pink-200 hover:border-pink-400',
     },
-    {
-      role: 'Tech Community Partner',
-      title: 'OSCode Tech Community',
-      subtitle: 'AGMRCET Student Chapter',
-      icon: <Code2 className="w-5 h-5 text-violet-600" />,
-      accent: 'border-violet-200 hover:border-violet-400',
-    },
   ];
 
   return (
@@ -51,7 +44,7 @@ export const PartnerLogos: React.FC = () => {
           <div className="h-[1px] w-12 bg-gradient-to-l from-transparent to-slate-300"></div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {partners.map((p, i) => (
             <div
               key={i}

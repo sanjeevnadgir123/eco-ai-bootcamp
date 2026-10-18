@@ -12,6 +12,8 @@ const INITIAL_SEED_REGISTRATIONS: StudentRegistration[] = [
     fullName: 'Rohan Sharma',
     email: 'rohan.ece@agmrcet.ac.in',
     phone: '9845012345',
+    usn: '2AG22EC045',
+    semester: '5th Semester',
     feeAmount: 200,
     utrNumber: '429184719283',
     paymentStatus: 'APPROVED',
@@ -25,6 +27,8 @@ const INITIAL_SEED_REGISTRATIONS: StudentRegistration[] = [
     fullName: 'Ananya Patil',
     email: 'ananya.p@agmrcet.ac.in',
     phone: '9741823940',
+    usn: '2AG23EC012',
+    semester: '3rd Semester',
     feeAmount: 200,
     utrNumber: '429193859102',
     paymentStatus: 'PENDING_VERIFICATION',
@@ -37,6 +41,8 @@ const INITIAL_SEED_REGISTRATIONS: StudentRegistration[] = [
     fullName: 'Karthik Hegde',
     email: 'karthik.hegde@gmail.com',
     phone: '9980123849',
+    usn: '2AG21EC089',
+    semester: '7th Semester',
     feeAmount: 200,
     utrNumber: '429204918274',
     paymentStatus: 'PENDING_VERIFICATION',
@@ -49,6 +55,8 @@ const INITIAL_SEED_REGISTRATIONS: StudentRegistration[] = [
     fullName: 'Megha Kulkarni',
     email: 'megha.k@agmrcet.ac.in',
     phone: '9448123901',
+    usn: '2AG22EC034',
+    semester: '5th Semester',
     feeAmount: 200,
     utrNumber: '429100293847',
     paymentStatus: 'APPROVED',
@@ -62,6 +70,8 @@ const INITIAL_SEED_REGISTRATIONS: StudentRegistration[] = [
     fullName: 'Suresh Nayak',
     email: 'suresh.nayak@yahoo.com',
     phone: '9123456780',
+    usn: '2AG22CS091',
+    semester: '5th Semester',
     feeAmount: 200,
     utrNumber: '429011928374',
     paymentStatus: 'REJECTED',
@@ -164,6 +174,8 @@ export const registrationService = {
     fullName: string;
     email: string;
     phone: string;
+    usn?: string;
+    semester?: string;
     isEligible?: boolean;
     feeAmount?: number;
     utrNumber: string;
@@ -190,6 +202,8 @@ export const registrationService = {
         fullName: params.fullName.trim(),
         email: normalizedEmail,
         phone: params.phone.trim(),
+        usn: params.usn?.trim(),
+        semester: params.semester?.trim(),
         feeAmount: params.feeAmount || 200,
         utrNumber: normalizedUtr,
         verificationToken: params.verificationToken,
@@ -217,6 +231,8 @@ export const registrationService = {
       fullName: params.fullName.trim(),
       email: normalizedEmail,
       phone: params.phone.trim(),
+      usn: params.usn?.trim(),
+      semester: params.semester?.trim(),
       feeAmount: params.feeAmount || 200,
       utrNumber: normalizedUtr,
       paymentStatus: 'PENDING_VERIFICATION',
@@ -232,6 +248,8 @@ export const registrationService = {
           full_name: newRecord.fullName,
           email: newRecord.email,
           phone: newRecord.phone,
+          usn: newRecord.usn,
+          semester: newRecord.semester,
           is_eligible: newRecord.isEligible,
           fee_amount: newRecord.feeAmount,
           utr_number: newRecord.utrNumber,
@@ -280,6 +298,8 @@ export const registrationService = {
           fullName: row.full_name,
           email: row.email,
           phone: row.phone,
+          usn: row.usn,
+          semester: row.semester,
           isEligible: row.is_eligible,
           feeAmount: row.fee_amount,
           utrNumber: row.utr_number,

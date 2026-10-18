@@ -138,6 +138,12 @@ export function createNeonMiddleware(databaseUrl: string) {
             );
           `;
           await sql`CREATE INDEX IF NOT EXISTS idx_email_verif_lookup ON email_verifications(LOWER(email));`;
+          try {
+            await sql`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS usn TEXT;`;
+            await sql`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS semester TEXT;`;
+          } catch (migErr) {
+            console.warn('[Neon] Registration columns migration notice:', migErr);
+          }
           isVerificationTableInitialized = true;
         } catch (e) {
           console.warn('[Neon] Table initialization notice:', e);
@@ -394,6 +400,8 @@ export function createNeonMiddleware(databaseUrl: string) {
             full_name AS "fullName",
             email,
             phone,
+            usn,
+            semester,
             fee_amount AS "feeAmount",
             utr_number AS "utrNumber",
             payment_status AS "paymentStatus",
@@ -411,7 +419,7 @@ export function createNeonMiddleware(databaseUrl: string) {
       // 8. Submit new registration (Enforces server-side email verification)
       if (url.pathname === '/api/registrations' && req.method === 'POST') {
         const body = await parseBody();
-        const { fullName, email, phone, isEligible, feeAmount, utrNumber, verificationToken } = body;
+        const { fullName, email, phone, usn, semester, isEligible, feeAmount, utrNumber, verificationToken } = body;
 
         if (!fullName || !email || !phone || !utrNumber) {
           return sendJson(400, { error: 'Missing required registration fields' });
@@ -472,6 +480,8 @@ export function createNeonMiddleware(databaseUrl: string) {
             full_name,
             email,
             phone,
+            usn,
+            semester,
             fee_amount,
             utr_number,
             payment_status,
@@ -481,6 +491,8 @@ export function createNeonMiddleware(databaseUrl: string) {
             ${String(fullName).trim()},
             ${normalizedEmail},
             ${String(phone).trim()},
+            ${usn ? String(usn).trim() : null},
+            ${semester ? String(semester).trim() : null},
             200,
             ${normalizedUtr},
             'PENDING_VERIFICATION',
@@ -492,6 +504,8 @@ export function createNeonMiddleware(databaseUrl: string) {
             full_name AS "fullName",
             email,
             phone,
+            usn,
+            semester,
             fee_amount AS "feeAmount",
             utr_number AS "utrNumber",
             payment_status AS "paymentStatus",

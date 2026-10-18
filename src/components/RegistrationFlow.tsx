@@ -16,7 +16,9 @@ import {
   Sparkles, 
   Download, 
   Clock, 
-  ExternalLink 
+  ExternalLink,
+  GraduationCap,
+  BookOpen
 } from 'lucide-react';
 import { emailVerificationService } from '../services/emailVerificationService';
 import { eligibilityService, EligibilityResult } from '../services/eligibilityService';
@@ -34,6 +36,8 @@ export const RegistrationFlow: React.FC = () => {
     fullName: '',
     email: '',
     phone: '',
+    usn: '',
+    semester: '',
   });
   const [step1Errors, setStep1Errors] = useState<Record<string, string>>({});
   const [step1Loading, setStep1Loading] = useState<boolean>(false);
@@ -113,6 +117,14 @@ export const RegistrationFlow: React.FC = () => {
       errs.phone = 'Please enter your phone number.';
     } else if (cleanPhone.length < 10) {
       errs.phone = 'Please enter a valid 10-digit phone number.';
+    }
+
+    if (!formData.usn.trim()) {
+      errs.usn = 'Please enter your USN.';
+    }
+
+    if (!formData.semester.trim()) {
+      errs.semester = 'Please enter or select your semester.';
     }
 
     setStep1Errors(errs);
@@ -264,6 +276,8 @@ export const RegistrationFlow: React.FC = () => {
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
+        usn: formData.usn,
+        semester: formData.semester,
         feeAmount: 200,
         utrNumber: utrNumber.trim(),
         verificationToken,
@@ -285,7 +299,7 @@ export const RegistrationFlow: React.FC = () => {
   };
 
   const restartFlow = () => {
-    setFormData({ fullName: '', email: '', phone: '' });
+    setFormData({ fullName: '', email: '', phone: '', usn: '', semester: '' });
     setVerificationCode('');
     setVerificationToken('');
     setEligibilityData(null);
@@ -467,6 +481,70 @@ export const RegistrationFlow: React.FC = () => {
                 )}
               </div>
 
+              {/* USN & Semester Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Enter Your USN */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    ENTER YOUR USN <span className="text-pink-600">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <GraduationCap className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.usn}
+                      onChange={(e) => setFormData({ ...formData, usn: e.target.value.toUpperCase() })}
+                      placeholder="e.g. 2AG22EC001"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm transition-all uppercase"
+                    />
+                  </div>
+                  {step1Errors.usn && (
+                    <p className="text-xs text-rose-600 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {step1Errors.usn}
+                    </p>
+                  )}
+                </div>
+
+                {/* Enter Your Semester */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    ENTER YOUR SEMESTER <span className="text-pink-600">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      list="semester-options"
+                      value={formData.semester}
+                      onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                      placeholder="e.g. 3rd Sem / 5th Sem / 7th Sem"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm transition-all"
+                    />
+                    <datalist id="semester-options">
+                      <option value="1st Semester" />
+                      <option value="2nd Semester" />
+                      <option value="3rd Semester" />
+                      <option value="4th Semester" />
+                      <option value="5th Semester" />
+                      <option value="6th Semester" />
+                      <option value="7th Semester" />
+                      <option value="8th Semester" />
+                    </datalist>
+                  </div>
+                  {step1Errors.semester && (
+                    <p className="text-xs text-rose-600 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {step1Errors.semester}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={step1Loading}
@@ -606,10 +684,18 @@ export const RegistrationFlow: React.FC = () => {
               </div>
 
               {/* Student Metadata Card */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs shadow-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs shadow-sm">
                 <div>
                   <span className="text-slate-500 block text-[10px]">Student Name</span>
                   <strong className="text-slate-900 truncate block">{formData.fullName}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">USN</span>
+                  <strong className="text-indigo-700 font-mono block">{formData.usn || 'N/A'}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Semester</span>
+                  <strong className="text-slate-900 block">{formData.semester || 'N/A'}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">Verified Email</span>
@@ -829,10 +915,18 @@ export const RegistrationFlow: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 text-xs mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                   <div>
                     <span className="text-slate-500 block text-[10px]">Student Name</span>
-                    <strong className="text-slate-900 block">{confirmedRegistration.fullName}</strong>
+                    <strong className="text-slate-900 block truncate">{confirmedRegistration.fullName}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">USN</span>
+                    <strong className="text-indigo-700 block font-mono">{confirmedRegistration.usn || 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Semester</span>
+                    <strong className="text-slate-900 block">{confirmedRegistration.semester || 'N/A'}</strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block text-[10px]">College Email</span>

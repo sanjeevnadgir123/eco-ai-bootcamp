@@ -140,7 +140,7 @@ export const HeroSection: React.FC = () => {
               </div>
               <div>
                 <p className="text-slate-500 font-medium text-[11px] uppercase tracking-wider">Collaboration</p>
-                <p className="font-extrabold text-slate-900 text-sm">OSCode & Geminal Studio</p>
+                <p className="font-extrabold text-slate-900 text-sm">Geminal Studio</p>
               </div>
             </div>
           </div>
