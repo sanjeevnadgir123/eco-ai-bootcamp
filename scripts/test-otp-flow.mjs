@@ -164,7 +164,8 @@ async function runTests() {
         fullName: 'Intruder',
         email: unverifiedEmail,
         phone: '9845000000',
-        isEligible: false,
+        usn: '2AG22EC000',
+        semester: '3rd Semester',
         feeAmount: 200,
         utrNumber: 'UTR000000000000',
       }),
@@ -191,11 +192,12 @@ async function runTests() {
     assert(validRegData.registration.usn === '2AG22EC099', "Registration: USN verified and stored correctly");
     assert(validRegData.registration.semester === '5th Semester', "Registration: Semester verified and stored correctly");
 
-    // 12. Verification Session Consumed Post-Registration
+    // 12. Verification Record Retained in email_verifications Post-Registration
     const postRegCheck = await sql`SELECT * FROM email_verifications WHERE LOWER(email) = ${TEST_EMAIL};`;
-    assert(postRegCheck.length === 0, "Security: Verification record deleted/consumed after registration creation");
+    assert(postRegCheck.length > 0 && postRegCheck[0].is_verified === true, "Verification: Email verification record retained with is_verified=true for audit");
 
-    // Clean up test registration
+    // Clean up test records
+    await sql`DELETE FROM email_verifications WHERE LOWER(email) = ${TEST_EMAIL};`;
     await sql`DELETE FROM registrations WHERE LOWER(email) = ${TEST_EMAIL};`;
     console.log("[Cleanup] Test records purged from Neon database.");
 

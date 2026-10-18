@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 CREATE TABLE IF NOT EXISTS email_verifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
+    code TEXT,
     otp_hash TEXT,
     attempts INTEGER NOT NULL DEFAULT 0,
     last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -55,29 +56,16 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 );
 
 -- ------------------------------------------------------------------------------
--- 3. Indexes for Fast Lookup
+-- 3. Cleanup: Drop standalone auxiliary tables (USN & Semester reside in registrations)
+-- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS student_usn_records CASCADE;
+DROP TABLE IF EXISTS student_semester_records CASCADE;
+
+-- ------------------------------------------------------------------------------
+-- 4. Indexes for Fast Lookup
 -- ------------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_registrations_email ON registrations(email);
 CREATE INDEX IF NOT EXISTS idx_registrations_utr ON registrations(utr_number);
 CREATE INDEX IF NOT EXISTS idx_registrations_status ON registrations(payment_status);
 CREATE INDEX IF NOT EXISTS idx_registrations_usn ON registrations(usn);
 CREATE INDEX IF NOT EXISTS idx_email_verif_lookup ON email_verifications(LOWER(email));
-
--- ------------------------------------------------------------------------------
--- 4. Optional Separate Tables (If you specifically need standalone USN & Semester tables)
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS student_usn_records (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    registration_id TEXT REFERENCES registrations(registration_id) ON DELETE CASCADE,
-    email TEXT NOT NULL,
-    usn TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS student_semester_records (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    registration_id TEXT REFERENCES registrations(registration_id) ON DELETE CASCADE,
-    email TEXT NOT NULL,
-    semester TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);

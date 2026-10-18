@@ -62,10 +62,15 @@ async function check() {
       );
     `;
 
+    // Drop standalone auxiliary tables so USN & Semester reside solely in registrations table
+    await sql`DROP TABLE IF EXISTS student_usn_records CASCADE;`;
+    await sql`DROP TABLE IF EXISTS student_semester_records CASCADE;`;
+
     await sql`
       CREATE TABLE IF NOT EXISTS email_verifications (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           email TEXT UNIQUE NOT NULL,
+          code TEXT,
           otp_hash TEXT,
           attempts INTEGER NOT NULL DEFAULT 0,
           last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -76,26 +81,10 @@ async function check() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `;
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS student_usn_records (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          registration_id TEXT,
-          email TEXT NOT NULL,
-          usn TEXT NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `;
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS student_semester_records (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          registration_id TEXT,
-          email TEXT NOT NULL,
-          semester TEXT NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `;
+    await sql`ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS code TEXT;`;
+    await sql`ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE;`;
+    await sql`ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;`;
+    await sql`ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS verification_token TEXT;`;
 
     await sql`CREATE INDEX IF NOT EXISTS idx_registrations_email ON registrations(email);`;
     await sql`CREATE INDEX IF NOT EXISTS idx_registrations_utr ON registrations(utr_number);`;

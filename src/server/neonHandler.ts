@@ -120,13 +120,14 @@ export function createNeonMiddleware(databaseUrl: string) {
     };
 
     try {
-      // Ensure email_verifications table exists in Neon
+      // Ensure email_verifications and registrations columns exist in Neon
       if (sql && !isVerificationTableInitialized) {
         try {
           await sql`
             CREATE TABLE IF NOT EXISTS email_verifications (
               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
               email TEXT UNIQUE NOT NULL,
+              code TEXT,
               otp_hash TEXT,
               attempts INTEGER NOT NULL DEFAULT 0,
               last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -142,24 +143,13 @@ export function createNeonMiddleware(databaseUrl: string) {
             await sql`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS usn TEXT;`;
             await sql`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS semester TEXT;`;
             await sql`CREATE INDEX IF NOT EXISTS idx_registrations_usn ON registrations(usn);`;
-            await sql`
-              CREATE TABLE IF NOT EXISTS student_usn_records (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                registration_id TEXT,
-                email TEXT NOT NULL,
-                usn TEXT NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-              );
-            `;
-            await sql`
-              CREATE TABLE IF NOT EXISTS student_semester_records (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                registration_id TEXT,
-                email TEXT NOT NULL,
-                semester TEXT NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-              );
-            `;
+            await sql`ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS code TEXT;`;
+            await sql`ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE;`;
+            await sql`ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;`;
+            await sql`ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS verification_token TEXT;`;
+            // Clean up standalone auxiliary tables so USN & Semester reside solely in registrations
+            await sql`DROP TABLE IF EXISTS student_usn_records CASCADE;`;
+            await sql`DROP TABLE IF EXISTS student_semester_records CASCADE;`;
           } catch (migErr) {
             console.warn('[Neon] Registration columns migration notice:', migErr);
           }
@@ -245,10 +235,11 @@ export function createNeonMiddleware(databaseUrl: string) {
           });
         }
 
-        // Store hashed OTP in Neon with 10-minute expiry (never storing raw code)
+        // Store OTP code and hashed OTP in Neon with 10-minute expiry
         await sql`
           INSERT INTO email_verifications (
             email,
+            code,
             otp_hash,
             attempts,
             last_sent_at,
@@ -260,6 +251,7 @@ export function createNeonMiddleware(databaseUrl: string) {
           )
           VALUES (
             ${normalizedEmail},
+            ${code},
             ${otpHash},
             0,
             NOW(),
@@ -271,6 +263,7 @@ export function createNeonMiddleware(databaseUrl: string) {
           )
           ON CONFLICT (email) DO UPDATE 
           SET 
+            code = ${code},
             otp_hash = ${otpHash},
             attempts = 0,
             last_sent_at = NOW(),
@@ -547,26 +540,18 @@ export function createNeonMiddleware(databaseUrl: string) {
             created_at AS "createdAt";
         `;
 
-        // Sync to auxiliary tables if present
+        // Retain verified status in email_verifications table for audit/history (do not delete)
         try {
           await sql`
-            INSERT INTO student_usn_records (registration_id, email, usn)
-            VALUES (${registrationId}, ${normalizedEmail}, ${normalizedUsn});
+            UPDATE email_verifications 
+            SET 
+              is_verified = TRUE,
+              verified_at = COALESCE(verified_at, NOW())
+            WHERE LOWER(email) = ${normalizedEmail};
           `;
-        } catch {
-          // ignore
+        } catch (e) {
+          console.warn('[Neon] Verification update notice:', e);
         }
-        try {
-          await sql`
-            INSERT INTO student_semester_records (registration_id, email, semester)
-            VALUES (${registrationId}, ${normalizedEmail}, ${normalizedSemester});
-          `;
-        } catch {
-          // ignore
-        }
-
-        // Consume the verification session after successful registration
-        await sql`DELETE FROM email_verifications WHERE LOWER(email) = ${normalizedEmail};`;
 
         return sendJson(201, { 
           success: true, 
@@ -615,24 +600,6 @@ export function createNeonMiddleware(databaseUrl: string) {
 
         if (updated.length === 0) {
           return sendJson(404, { error: 'Registration record not found' });
-        }
-
-        // Also sync to standalone tables if they exist
-        try {
-          if (usn && updated[0].email) {
-            await sql`
-              INSERT INTO student_usn_records (registration_id, email, usn)
-              VALUES (${updated[0].registrationId}, ${updated[0].email}, ${usn});
-            `;
-          }
-          if (semester && updated[0].email) {
-            await sql`
-              INSERT INTO student_semester_records (registration_id, email, semester)
-              VALUES (${updated[0].registrationId}, ${updated[0].email}, ${semester});
-            `;
-          }
-        } catch {
-          // ignore
         }
 
         return sendJson(200, { success: true, registration: updated[0] });
