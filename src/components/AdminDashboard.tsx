@@ -16,7 +16,9 @@ import {
   AlertTriangle, 
   Mail, 
   Phone, 
-  ArrowLeft 
+  ArrowLeft,
+  Edit2,
+  Save
 } from 'lucide-react';
 import { registrationService } from '../services/registrationService';
 import { neonService, NeonHealthStatus } from '../services/neonService';
@@ -49,6 +51,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  // Edit Student Details State
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editUsn, setEditUsn] = useState('');
+  const [editSemester, setEditSemester] = useState('');
+  const [editFullName, setEditFullName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
 
   const [neonStatus, setNeonStatus] = useState<NeonHealthStatus | null>(null);
 
@@ -137,6 +147,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       setTimeout(() => setToastMessage(''), 6000);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleStartEditDetails = () => {
+    if (!selectedReg) return;
+    setEditUsn(selectedReg.usn || '');
+    setEditSemester(selectedReg.semester || '');
+    setEditFullName(selectedReg.fullName || '');
+    setEditPhone(selectedReg.phone || '');
+    setIsEditingDetails(true);
+  };
+
+  const handleSaveStudentDetails = async () => {
+    if (!selectedReg) return;
+    setIsSavingDetails(true);
+    try {
+      const regKey = selectedReg.registrationId || selectedReg.id;
+      const updated = await registrationService.updateRegistrationDetails(regKey, {
+        usn: editUsn.trim().toUpperCase(),
+        semester: editSemester.trim(),
+        fullName: editFullName.trim(),
+        phone: editPhone.trim(),
+      });
+      setSelectedReg(updated);
+      setIsEditingDetails(false);
+      await loadData();
+      setToastMessage('Student details (USN & Semester) updated successfully in database.');
+      setTimeout(() => setToastMessage(''), 5000);
+    } catch (err: any) {
+      console.error('Failed to update student details:', err);
+      setToastMessage(`Failed to update details: ${err?.message || 'Database error'}`);
+      setTimeout(() => setToastMessage(''), 6000);
+    } finally {
+      setIsSavingDetails(false);
     }
   };
 
@@ -525,11 +569,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card max-w-lg w-full p-6 rounded-3xl border-slate-200 shadow-2xl relative bg-white">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h4 className="text-lg font-extrabold text-slate-900">
-                Registration Verification
-              </h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-lg font-extrabold text-slate-900">
+                  Registration Verification
+                </h4>
+                {!isEditingDetails && (
+                  <button
+                    onClick={handleStartEditDetails}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+                  >
+                    <Edit2 className="w-3 h-3" /> Edit USN & Info
+                  </button>
+                )}
+              </div>
               <button
-                onClick={() => setSelectedReg(null)}
+                onClick={() => { setSelectedReg(null); setIsEditingDetails(false); }}
                 className="p-1 text-slate-400 hover:text-slate-800"
               >
                 ✕
@@ -537,42 +591,142 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             </div>
 
             <div className="py-4 space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Registration ID</span>
-                  <strong className="text-slate-900 font-mono">{selectedReg.registrationId}</strong>
+              {isEditingDetails ? (
+                <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-200 space-y-3">
+                  <div className="flex items-center justify-between pb-1 border-b border-indigo-100">
+                    <span className="font-bold text-indigo-900 text-xs">
+                      Update Student Details in Database
+                    </span>
+                    <span className="text-[10px] text-indigo-600 font-mono">
+                      {selectedReg.registrationId}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editFullName}
+                        onChange={(e) => setEditFullName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+                        Phone Number
+                      </label>
+                      <input
+                        type="text"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-indigo-900 mb-1">
+                        USN (University Seat Number) <span className="text-pink-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editUsn}
+                        onChange={(e) => setEditUsn(e.target.value.toUpperCase())}
+                        placeholder="e.g. 2AG22EC001"
+                        className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-lg text-xs font-mono uppercase text-indigo-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-indigo-900 mb-1">
+                        Semester <span className="text-pink-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        list="modal-sem-options"
+                        value={editSemester}
+                        onChange={(e) => setEditSemester(e.target.value)}
+                        placeholder="e.g. 5th Semester"
+                        className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-lg text-xs text-indigo-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <datalist id="modal-sem-options">
+                        <option value="1st Semester" />
+                        <option value="2nd Semester" />
+                        <option value="3rd Semester" />
+                        <option value="4th Semester" />
+                        <option value="5th Semester" />
+                        <option value="6th Semester" />
+                        <option value="7th Semester" />
+                        <option value="8th Semester" />
+                      </datalist>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      disabled={isSavingDetails}
+                      onClick={() => setIsEditingDetails(false)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSavingDetails || !editUsn.trim() || !editSemester.trim()}
+                      onClick={handleSaveStudentDetails}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-xs disabled:opacity-50"
+                    >
+                      {isSavingDetails ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-3.5 h-3.5" /> Save USN & Details
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Student Name</span>
-                  <strong className="text-slate-900">{selectedReg.fullName}</strong>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Registration ID</span>
+                    <strong className="text-slate-900 font-mono">{selectedReg.registrationId}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Student Name</span>
+                    <strong className="text-slate-900">{selectedReg.fullName}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">USN</span>
+                    <strong className="text-indigo-700 font-mono">{selectedReg.usn && selectedReg.usn.trim() ? selectedReg.usn : 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Semester</span>
+                    <strong className="text-slate-900">{selectedReg.semester && selectedReg.semester.trim() ? selectedReg.semester : 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Email Address</span>
+                    <strong className="text-cyan-700">{selectedReg.email}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Phone Number</span>
+                    <strong className="text-slate-700">{selectedReg.phone}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Bootcamp Fee</span>
+                    <strong className="text-emerald-700 font-mono">
+                      ₹{selectedReg.feeAmount}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">Submitted UTR</span>
+                    <strong className="text-indigo-700 font-mono text-sm">{selectedReg.utrNumber || 'N/A'}</strong>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">USN</span>
-                  <strong className="text-indigo-700 font-mono">{selectedReg.usn || 'N/A'}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Semester</span>
-                  <strong className="text-slate-900">{selectedReg.semester || 'N/A'}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Email Address</span>
-                  <strong className="text-cyan-700">{selectedReg.email}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Phone Number</span>
-                  <strong className="text-slate-700">{selectedReg.phone}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Bootcamp Fee</span>
-                  <strong className="text-emerald-700 font-mono">
-                    ₹{selectedReg.feeAmount}
-                  </strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Submitted UTR</span>
-                  <strong className="text-indigo-700 font-mono text-sm">{selectedReg.utrNumber || 'N/A'}</strong>
-                </div>
-              </div>
+              )}
 
               {selectedReg.rejectionReason && (
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
@@ -599,7 +753,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 </>
               )}
               <button
-                onClick={() => setSelectedReg(null)}
+                onClick={() => { setSelectedReg(null); setIsEditingDetails(false); }}
                 className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
               >
                 Close

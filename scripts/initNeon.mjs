@@ -35,84 +35,82 @@ async function check() {
     console.log("Neon Connection SUCCESSFUL!");
     console.log("Postgres version:", versionResult[0]?.version);
 
-    // Check if tables already exist
-    const tables = await sql`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public';
+    // 1. Ensure migrations and columns exist
+    console.log("Ensuring schema integrity (USN, Semester, Email Verifications)...");
+    
+    await sql`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS usn TEXT;`;
+    await sql`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS semester TEXT;`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_registrations_usn ON registrations(usn);`;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS registrations (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          registration_id TEXT UNIQUE NOT NULL,
+          full_name TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          phone TEXT NOT NULL,
+          usn TEXT,
+          semester TEXT,
+          fee_amount INTEGER NOT NULL DEFAULT 200,
+          utr_number TEXT UNIQUE NOT NULL,
+          payment_status TEXT NOT NULL DEFAULT 'PENDING_VERIFICATION' CHECK (payment_status IN ('PENDING_PAYMENT', 'PENDING_VERIFICATION', 'APPROVED', 'REJECTED')),
+          registration_status TEXT NOT NULL DEFAULT 'SUBMITTED' CHECK (registration_status IN ('DRAFT', 'SUBMITTED', 'CONFIRMED')),
+          rejection_reason TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW(),
+          approved_at TIMESTAMPTZ
+      );
     `;
-    console.log("Existing tables:", tables.map(t => t.table_name));
 
-    const hasRegistrations = tables.some(t => t.table_name === 'registrations');
-    const hasEligibility = tables.some(t => t.table_name === 'attendance_eligibility');
+    await sql`
+      CREATE TABLE IF NOT EXISTS email_verifications (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          email TEXT UNIQUE NOT NULL,
+          otp_hash TEXT,
+          attempts INTEGER NOT NULL DEFAULT 0,
+          last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+          verified_at TIMESTAMPTZ,
+          verification_token TEXT,
+          expires_at TIMESTAMPTZ NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `;
 
-    if (!hasRegistrations || !hasEligibility) {
-      console.log("Tables not found. Creating schema automatically from neon_schema.sql...");
-      const schemaSql = fs.readFileSync('neon_schema.sql', 'utf-8');
-      
-      // Execute schema statements
-      // We can split by statement or execute
-      // Note: with neon HTTP, multiple statements can be run or individual statements
-      // Let's create the tables
-      await sql`
-        CREATE TABLE IF NOT EXISTS attendance_eligibility (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            email TEXT UNIQUE NOT NULL,
-            student_name TEXT NOT NULL,
-            department TEXT NOT NULL DEFAULT 'ECE',
-            semester TEXT NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-      `;
-      console.log("Created table: attendance_eligibility");
+    await sql`
+      CREATE TABLE IF NOT EXISTS student_usn_records (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          registration_id TEXT,
+          email TEXT NOT NULL,
+          usn TEXT NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `;
 
-      await sql`
-        CREATE TABLE IF NOT EXISTS registrations (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            registration_id TEXT UNIQUE NOT NULL,
-            full_name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            phone TEXT NOT NULL,
-            is_eligible BOOLEAN NOT NULL DEFAULT FALSE,
-            fee_amount INTEGER NOT NULL CHECK (fee_amount IN (100, 200)),
-            utr_number TEXT UNIQUE NOT NULL,
-            payment_status TEXT NOT NULL DEFAULT 'PENDING_VERIFICATION' CHECK (payment_status IN ('PENDING_PAYMENT', 'PENDING_VERIFICATION', 'APPROVED', 'REJECTED')),
-            registration_status TEXT NOT NULL DEFAULT 'SUBMITTED' CHECK (registration_status IN ('DRAFT', 'SUBMITTED', 'CONFIRMED')),
-            rejection_reason TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ DEFAULT NOW(),
-            approved_at TIMESTAMPTZ
-        );
-      `;
-      console.log("Created table: registrations");
+    await sql`
+      CREATE TABLE IF NOT EXISTS student_semester_records (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          registration_id TEXT,
+          email TEXT NOT NULL,
+          semester TEXT NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `;
 
-      await sql`CREATE INDEX IF NOT EXISTS idx_registrations_email ON registrations(email);`;
-      await sql`CREATE INDEX IF NOT EXISTS idx_registrations_utr ON registrations(utr_number);`;
-      await sql`CREATE INDEX IF NOT EXISTS idx_registrations_status ON registrations(payment_status);`;
-      await sql`CREATE INDEX IF NOT EXISTS idx_eligibility_email ON attendance_eligibility(LOWER(email));`;
-      console.log("Created indexes");
-
-      await sql`
-        INSERT INTO attendance_eligibility (email, student_name, department, semester)
-        VALUES 
-            ('student@agmrcet.ac.in', 'Student Representative', 'ECE', '5th Sem'),
-            ('eco.member@agmrcet.ac.in', 'ECO Executive Member', 'ECE', '7th Sem'),
-            ('topper.ece@agmrcet.ac.in', 'Class Representative', 'ECE', '5th Sem')
-        ON CONFLICT (email) DO NOTHING;
-      `;
-      console.log("Seeded initial attendance eligibility records");
-    }
-
-    // Clean any temporary test record
-    await sql`DELETE FROM registrations WHERE email = 'test.student@agmrcet.ac.in';`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_registrations_email ON registrations(email);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_registrations_utr ON registrations(utr_number);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_registrations_status ON registrations(payment_status);`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_email_verif_lookup ON email_verifications(LOWER(email));`;
 
     const regCount = await sql`SELECT count(*) FROM registrations;`;
-    const eligCount = await sql`SELECT count(*) FROM attendance_eligibility;`;
-    console.log(`Current stats: ${regCount[0].count} registrations, ${eligCount[0].count} eligible students in database.`);
+    const verifCount = await sql`SELECT count(*) FROM email_verifications;`;
+
+    console.log(`Current stats: ${regCount[0].count} registrations, ${verifCount[0].count} email verification records in database.`);
     console.log("DATABASE SETUP COMPLETE & 100% CONNECTED!");
 
   } catch (err) {
-    console.error("Neon connection failed:", err);
+    console.error("Neon verification failed:", err);
+    process.exit(1);
   }
 }
 

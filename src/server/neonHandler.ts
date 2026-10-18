@@ -141,6 +141,25 @@ export function createNeonMiddleware(databaseUrl: string) {
           try {
             await sql`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS usn TEXT;`;
             await sql`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS semester TEXT;`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_registrations_usn ON registrations(usn);`;
+            await sql`
+              CREATE TABLE IF NOT EXISTS student_usn_records (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                registration_id TEXT,
+                email TEXT NOT NULL,
+                usn TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+              );
+            `;
+            await sql`
+              CREATE TABLE IF NOT EXISTS student_semester_records (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                registration_id TEXT,
+                email TEXT NOT NULL,
+                semester TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+              );
+            `;
           } catch (migErr) {
             console.warn('[Neon] Registration columns migration notice:', migErr);
           }
@@ -419,10 +438,25 @@ export function createNeonMiddleware(databaseUrl: string) {
       // 8. Submit new registration (Enforces server-side email verification)
       if (url.pathname === '/api/registrations' && req.method === 'POST') {
         const body = await parseBody();
-        const { fullName, email, phone, usn, semester, isEligible, feeAmount, utrNumber, verificationToken } = body;
+        const { fullName, email, phone, utrNumber, verificationToken } = body;
+
+        // Robust extraction of USN and Semester supporting various casings/aliases
+        const rawUsn = body.usn ?? body.USN ?? body.studentUsn ?? body.usnNumber ?? body.usn_number;
+        const rawSemester = body.semester ?? body.Semester ?? body.sem ?? body.studentSemester ?? body.student_semester;
+
+        const normalizedUsn = rawUsn ? String(rawUsn).trim().toUpperCase() : '';
+        const normalizedSemester = rawSemester ? String(rawSemester).trim() : '';
 
         if (!fullName || !email || !phone || !utrNumber) {
           return sendJson(400, { error: 'Missing required registration fields' });
+        }
+
+        if (!normalizedUsn) {
+          return sendJson(400, { error: 'Student USN is required for registration.' });
+        }
+
+        if (!normalizedSemester) {
+          return sendJson(400, { error: 'Student Semester is required for registration.' });
         }
 
         const rawEmail = String(email).trim();
@@ -491,8 +525,8 @@ export function createNeonMiddleware(databaseUrl: string) {
             ${String(fullName).trim()},
             ${normalizedEmail},
             ${String(phone).trim()},
-            ${usn ? String(usn).trim() : null},
-            ${semester ? String(semester).trim() : null},
+            ${normalizedUsn},
+            ${normalizedSemester},
             200,
             ${normalizedUtr},
             'PENDING_VERIFICATION',
@@ -513,6 +547,24 @@ export function createNeonMiddleware(databaseUrl: string) {
             created_at AS "createdAt";
         `;
 
+        // Sync to auxiliary tables if present
+        try {
+          await sql`
+            INSERT INTO student_usn_records (registration_id, email, usn)
+            VALUES (${registrationId}, ${normalizedEmail}, ${normalizedUsn});
+          `;
+        } catch {
+          // ignore
+        }
+        try {
+          await sql`
+            INSERT INTO student_semester_records (registration_id, email, semester)
+            VALUES (${registrationId}, ${normalizedEmail}, ${normalizedSemester});
+          `;
+        } catch {
+          // ignore
+        }
+
         // Consume the verification session after successful registration
         await sql`DELETE FROM email_verifications WHERE LOWER(email) = ${normalizedEmail};`;
 
@@ -520,6 +572,70 @@ export function createNeonMiddleware(databaseUrl: string) {
           success: true, 
           registration: inserted[0] 
         });
+      }
+
+      // 8b. Update student details (USN, Semester, Name, Phone) by Administrator
+      const detailsMatch = url.pathname.match(/^\/api\/registrations\/([^/]+)\/details$/);
+      if (detailsMatch && req.method === 'PATCH') {
+        const registrationId = detailsMatch[1];
+        const body = await parseBody();
+        const rawUsn = body.usn ?? body.USN;
+        const rawSemester = body.semester ?? body.Semester ?? body.sem;
+        const fullName = body.fullName ? String(body.fullName).trim() : null;
+        const phone = body.phone ? String(body.phone).trim() : null;
+        const usn = rawUsn ? String(rawUsn).trim().toUpperCase() : null;
+        const semester = rawSemester ? String(rawSemester).trim() : null;
+
+        const updated = await sql`
+          UPDATE registrations 
+          SET 
+            usn = COALESCE(${usn}, usn),
+            semester = COALESCE(${semester}, semester),
+            full_name = COALESCE(${fullName}, full_name),
+            phone = COALESCE(${phone}, phone),
+            updated_at = NOW()
+          WHERE registration_id = ${registrationId} OR id::text = ${registrationId}
+          RETURNING 
+            id,
+            registration_id AS "registrationId",
+            full_name AS "fullName",
+            email,
+            phone,
+            usn,
+            semester,
+            fee_amount AS "feeAmount",
+            utr_number AS "utrNumber",
+            payment_status AS "paymentStatus",
+            registration_status AS "registrationStatus",
+            rejection_reason AS "rejectionReason",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt",
+            approved_at AS "approvedAt";
+        `;
+
+        if (updated.length === 0) {
+          return sendJson(404, { error: 'Registration record not found' });
+        }
+
+        // Also sync to standalone tables if they exist
+        try {
+          if (usn && updated[0].email) {
+            await sql`
+              INSERT INTO student_usn_records (registration_id, email, usn)
+              VALUES (${updated[0].registrationId}, ${updated[0].email}, ${usn});
+            `;
+          }
+          if (semester && updated[0].email) {
+            await sql`
+              INSERT INTO student_semester_records (registration_id, email, semester)
+              VALUES (${updated[0].registrationId}, ${updated[0].email}, ${semester});
+            `;
+          }
+        } catch {
+          // ignore
+        }
+
+        return sendJson(200, { success: true, registration: updated[0] });
       }
 
       // 9. Update payment status (Approve / Reject)

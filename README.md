@@ -432,8 +432,9 @@ All backend routes are prefixed with `/api/` and return `application/json`.
 | `GET` | `/api/eligibility` | Check if email is already registered | Public | `?email=student@agmrcet.ac.in` | `{ "alreadyRegistered": false, "feeAmount": 200 }` |
 | `GET` | `/api/check-utr` | Check if transaction UTR is duplicate | Public | `?utr=429184719283` | `{ "isDuplicate": false }` |
 | `GET` | `/api/registrations` | Fetch all registration records | Admin / Coordinator | None | `{ "registrations": [ ... ] }` |
-| `POST` | `/api/registrations` | Create new registration record | Requires verified OTP token within 2 hours | `{ "fullName": "...", "email": "...", "phone": "...", "utrNumber": "...", "verificationToken": "..." }` | `{ "success": true, "registration": { ... } }` |
+| `POST` | `/api/registrations` | Create new registration record | Requires verified OTP token within 2 hours | `{ "fullName": "...", "email": "...", "phone": "...", "usn": "2AG22EC001", "semester": "5th Semester", "utrNumber": "...", "verificationToken": "..." }` | `{ "success": true, "registration": { ... } }` |
 | `PATCH` | `/api/registrations/:id/status` | Approve or reject payment status | Coordinator action | `{ "paymentStatus": "APPROVED" \| "REJECTED", "rejectionReason": "..." }` | `{ "success": true, "registration": { ... } }` |
+| `PATCH` | `/api/registrations/:id/details` | Update student information (USN, Semester, etc.) | Coordinator action | `{ "usn": "2AG22EC001", "semester": "5th Semester" }` | `{ "success": true, "registration": { ... } }` |
 
 ---
 

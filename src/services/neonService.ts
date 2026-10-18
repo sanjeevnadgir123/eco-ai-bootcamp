@@ -115,4 +115,30 @@ export const neonService = {
     }
     return data.registration;
   },
+
+  /**
+   * Update student details (USN, Semester, Name, Phone) in Neon
+   */
+  async updateRegistrationDetails(
+    registrationId: string,
+    details: {
+      usn?: string;
+      semester?: string;
+      fullName?: string;
+      phone?: string;
+    }
+  ) {
+    const res = await fetch(`${API_BASE_URL}/api/registrations/${registrationId}/details`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(details),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to update registration details in Neon database');
+    }
+    return data.registration;
+  },
 };
+

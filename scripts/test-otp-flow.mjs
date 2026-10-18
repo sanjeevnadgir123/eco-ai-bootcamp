@@ -179,7 +179,8 @@ async function runTests() {
         fullName: 'Automated Test Student',
         email: TEST_EMAIL,
         phone: '9845011111',
-        isEligible: false,
+        usn: '2AG22EC099',
+        semester: '5th Semester',
         feeAmount: 200,
         utrNumber: 'UTR999999999999',
         verificationToken: correctCodeData.verificationToken,
@@ -187,6 +188,8 @@ async function runTests() {
     });
     const validRegData = await validRegRes.json();
     assert(validRegRes.status === 201 && validRegData.success === true, "Registration: Successfully ALLOWED after verified OTP");
+    assert(validRegData.registration.usn === '2AG22EC099', "Registration: USN verified and stored correctly");
+    assert(validRegData.registration.semester === '5th Semester', "Registration: Semester verified and stored correctly");
 
     // 12. Verification Session Consumed Post-Registration
     const postRegCheck = await sql`SELECT * FROM email_verifications WHERE LOWER(email) = ${TEST_EMAIL};`;

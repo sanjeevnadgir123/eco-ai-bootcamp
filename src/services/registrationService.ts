@@ -2,7 +2,7 @@ import { StudentRegistration, PaymentStatus, RegistrationStatus } from '../types
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { neonService } from './neonService';
 
-const REGISTRATIONS_STORAGE_KEY = 'eco_bootcamp_registrations_v1';
+const REGISTRATIONS_STORAGE_KEY = 'eco_bootcamp_registrations_v2';
 
 // Seed realistic initial registrations for the admin dashboard demo
 const INITIAL_SEED_REGISTRATIONS: StudentRegistration[] = [
@@ -83,8 +83,39 @@ const INITIAL_SEED_REGISTRATIONS: StudentRegistration[] = [
 
 function getStoredRegistrations(): StudentRegistration[] {
   try {
-    const raw = localStorage.getItem(REGISTRATIONS_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    // Try current storage key or migrate from v1
+    let raw = localStorage.getItem(REGISTRATIONS_STORAGE_KEY);
+    if (!raw) {
+      raw = localStorage.getItem('eco_bootcamp_registrations_v1');
+    }
+    if (raw) {
+      const records = JSON.parse(raw);
+      if (Array.isArray(records) && records.length > 0) {
+        // Safe additive migration: patch any legacy record missing USN or Semester
+        let patched = false;
+        const normalized = records.map((r: any) => {
+          let usn = r.usn;
+          let semester = r.semester;
+          if (!usn || !semester) {
+            const seed = INITIAL_SEED_REGISTRATIONS.find((s) => s.registrationId === r.registrationId || s.email === r.email);
+            if (seed) {
+              usn = usn || seed.usn;
+              semester = semester || seed.semester;
+              patched = true;
+            }
+          }
+          return {
+            ...r,
+            usn: usn ? String(usn).trim().toUpperCase() : (r.usn || ''),
+            semester: semester ? String(semester).trim() : (r.semester || ''),
+          };
+        });
+        if (patched || !localStorage.getItem(REGISTRATIONS_STORAGE_KEY)) {
+          localStorage.setItem(REGISTRATIONS_STORAGE_KEY, JSON.stringify(normalized));
+        }
+        return normalized;
+      }
+    }
   } catch (err) {
     console.error('Failed reading local registrations:', err);
   }
@@ -279,7 +310,11 @@ export const registrationService = {
     try {
       const neonRows = await neonService.getAllRegistrations();
       if (neonRows && Array.isArray(neonRows)) {
-        return neonRows;
+        return neonRows.map((row: any) => ({
+          ...row,
+          usn: row.usn ? String(row.usn).trim().toUpperCase() : '',
+          semester: row.semester ? String(row.semester).trim() : '',
+        }));
       }
     } catch (e) {
       console.warn('Neon fetch registrations fallback:', e);
@@ -298,8 +333,8 @@ export const registrationService = {
           fullName: row.full_name,
           email: row.email,
           phone: row.phone,
-          usn: row.usn,
-          semester: row.semester,
+          usn: row.usn ? String(row.usn).trim().toUpperCase() : '',
+          semester: row.semester ? String(row.semester).trim() : '',
           isEligible: row.is_eligible,
           feeAmount: row.fee_amount,
           utrNumber: row.utr_number,
@@ -313,6 +348,73 @@ export const registrationService = {
     }
 
     return getStoredRegistrations();
+  },
+
+  /**
+   * Update student registration details (USN, Semester, Name, Phone)
+   */
+  async updateRegistrationDetails(
+    id: string,
+    details: {
+      usn?: string;
+      semester?: string;
+      fullName?: string;
+      phone?: string;
+    }
+  ): Promise<StudentRegistration> {
+    const trimmedUsn = details.usn ? details.usn.trim().toUpperCase() : undefined;
+    const trimmedSemester = details.semester ? details.semester.trim() : undefined;
+    const trimmedName = details.fullName ? details.fullName.trim() : undefined;
+    const trimmedPhone = details.phone ? details.phone.trim() : undefined;
+
+    // 1. Update Neon Backend
+    try {
+      const updatedNeon = await neonService.updateRegistrationDetails(id, {
+        usn: trimmedUsn,
+        semester: trimmedSemester,
+        fullName: trimmedName,
+        phone: trimmedPhone,
+      });
+      if (updatedNeon) {
+        const current = getStoredRegistrations();
+        const index = current.findIndex((r) => r.id === id || r.registrationId === id);
+        if (index !== -1) {
+          current[index] = { ...current[index], ...updatedNeon };
+          saveStoredRegistrations(current);
+        }
+        return updatedNeon;
+      }
+    } catch (e: any) {
+      console.warn('Neon update details fallback:', e);
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from('registrations')
+        .update({
+          usn: trimmedUsn,
+          semester: trimmedSemester,
+          full_name: trimmedName,
+          phone: trimmedPhone,
+        })
+        .eq('id', id);
+    }
+
+    const current = getStoredRegistrations();
+    const index = current.findIndex((r) => r.id === id || r.registrationId === id);
+    if (index !== -1) {
+      current[index] = {
+        ...current[index],
+        usn: trimmedUsn !== undefined ? trimmedUsn : current[index].usn,
+        semester: trimmedSemester !== undefined ? trimmedSemester : current[index].semester,
+        fullName: trimmedName !== undefined ? trimmedName : current[index].fullName,
+        phone: trimmedPhone !== undefined ? trimmedPhone : current[index].phone,
+        updatedAt: new Date().toISOString(),
+      };
+      saveStoredRegistrations(current);
+      return current[index];
+    }
+    throw new Error('Registration record not found');
   },
 
   /**

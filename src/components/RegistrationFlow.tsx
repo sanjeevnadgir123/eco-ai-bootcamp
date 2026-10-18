@@ -268,16 +268,28 @@ export const RegistrationFlow: React.FC = () => {
       return;
     }
 
+    const trimmedUsn = formData.usn ? formData.usn.trim().toUpperCase() : '';
+    const trimmedSemester = formData.semester ? formData.semester.trim() : '';
+
+    if (!trimmedUsn) {
+      setUtrError('Student USN is missing. Please return to Step 1 and enter your USN.');
+      return;
+    }
+    if (!trimmedSemester) {
+      setUtrError('Student Semester is missing. Please return to Step 1 and select your Semester.');
+      return;
+    }
+
     setUtrSubmitting(true);
     setUtrError('');
 
     try {
       const created = await registrationService.submitRegistration({
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        usn: formData.usn,
-        semester: formData.semester,
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        usn: trimmedUsn,
+        semester: trimmedSemester,
         feeAmount: 200,
         utrNumber: utrNumber.trim(),
         verificationToken,
@@ -493,6 +505,9 @@ export const RegistrationFlow: React.FC = () => {
                       <GraduationCap className="w-4 h-4" />
                     </div>
                     <input
+                      id="student-usn"
+                      name="usn"
+                      autoComplete="off"
                       type="text"
                       value={formData.usn}
                       onChange={(e) => setFormData({ ...formData, usn: e.target.value.toUpperCase() })}
@@ -510,7 +525,7 @@ export const RegistrationFlow: React.FC = () => {
 
                 {/* Enter Your Semester */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                  <label htmlFor="student-semester" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                     ENTER YOUR SEMESTER <span className="text-pink-600">*</span>
                   </label>
                   <div className="relative">
@@ -518,6 +533,9 @@ export const RegistrationFlow: React.FC = () => {
                       <BookOpen className="w-4 h-4" />
                     </div>
                     <input
+                      id="student-semester"
+                      name="semester"
+                      autoComplete="off"
                       type="text"
                       list="semester-options"
                       value={formData.semester}
