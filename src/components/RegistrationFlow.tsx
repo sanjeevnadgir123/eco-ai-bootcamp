@@ -28,6 +28,10 @@ import { StudentRegistration } from '../types';
 import paymentQrImg from '../assets/payment-qr.png';
 
 export const RegistrationFlow: React.FC = () => {
+  // Flag to temporarily close public registrations on frontend (Limit reached: 130 students)
+  // Set to false to restore the full registration flow
+  const IS_REGISTRATION_CLOSED = true;
+
   // Step indicator 1 to 6
   const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -338,7 +342,27 @@ export const RegistrationFlow: React.FC = () => {
       {/* Background radial glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-cyan-400/10 rounded-full blur-[150px] pointer-events-none" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {IS_REGISTRATION_CLOSED ? (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="glass-card rounded-3xl p-8 sm:p-14 border border-slate-200/90 shadow-xl relative bg-white text-center">
+            {/* Visual status icon */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-rose-50 border border-rose-200/80 flex items-center justify-center mx-auto mb-6 text-rose-600 shadow-sm">
+              <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10" />
+            </div>
+
+            {/* Closure Heading */}
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight mb-4">
+              REGISTRATIONS CLOSED
+            </h2>
+
+            {/* Closure Notice Message */}
+            <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto leading-relaxed font-normal">
+              The registration limit of 130 students has been reached. Registration for the ECO AI Bootcamp is now officially closed. Thank you for your interest!
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-cyan-700 mb-3 shadow-sm">
@@ -1005,6 +1029,7 @@ export const RegistrationFlow: React.FC = () => {
           )}
         </div>
       </div>
+      )}
     </section>
   );
 };
